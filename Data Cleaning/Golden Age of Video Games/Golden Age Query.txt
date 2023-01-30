@@ -1,0 +1,83 @@
+--Selecciono la información de los 10 juegos más vendidos
+--Ordeno los resultados del primer más vendido al décimo más vendido
+SELECT *
+FROM game_sales
+ORDER BY games_sold DESC
+LIMIT 10;
+
+
+--Hago un JOIN entre las tablas de ventas y reseñas
+--Cuento la cantidad de juegos que no tienen user_score ni critic_score
+SELECT COUNT (game_sales.game)
+FROM game_sales
+LEFT JOIN reviews
+ON game_sales.game = reviews.game
+WHERE user_score IS NULL AND critic_score IS NULL;
+-- Esto me da 31
+
+
+--Selecciono el año de publicación y el puntaje promedio de la crítica
+--Hago un JOIN entre las tablas
+--Agrupo por año de lanzamiento y ordeno de mayor a menor según las críticas
+SELECT year, ROUND(AVG(critic_score), 2) AS avg_critic_score
+FROM game_sales
+INNER JOIN reviews
+ON game_sales.game = reviews.game
+GROUP BY year
+ORDER BY avg_critic_score DESC
+LIMIT 10;
+
+
+--Actualizo la query anterior para añadir un recuento de juegos publicados por año
+--Elijo solo aquellos años en los que se publicaron más de 4 juegos
+SELECT year, ROUND(AVG(critic_score), 2) AS avg_critic_score, COUNT(game_sales.game) AS num_games
+FROM game_sales
+INNER JOIN reviews
+ON game_sales.game = reviews.game
+GROUP BY year
+HAVING COUNT(game_sales.game) > 4
+ORDER BY avg_critic_score DESC
+LIMIT 10;
+
+
+--Selecciono el año y el promedio de la critica de aquellos años que estaban en la lista de favoritos pero lanzaron 4 juegos o menos
+SELECT year, avg_critic_score
+FROM top_critic_years
+EXCEPT
+SELECT year, avg_critic_score
+FROM top_critic_years_more_than_four_games
+ORDER BY avg_critic_score DESC;
+
+
+--Creo una query similar a la 4ta, solo que ahora tengo en cuenta la puntuación de los jugadores (la cambio por la puntuación de la crítica)
+SELECT year, ROUND(AVG(user_score), 2) AS avg_user_score, COUNT(game_sales.game) AS num_games
+FROM game_sales
+INNER JOIN reviews
+ON game_sales.game = reviews.game
+GROUP BY year
+HAVING COUNT(game_sales.game) > 4
+ORDER BY avg_user_score DESC
+LIMIT 10;
+
+
+--Selecciono los años en donde se hayan lanzado más de 4 juegos y sean los más aclamados por la crítica y el público
+SELECT year
+FROM top_critic_years_more_than_four_games
+INTERSECT
+SELECT year
+FROM top_user_years_more_than_four_games;
+
+
+--Selecciono el año y el total de copias vendidas ese año
+--Filtro las ventas en función de si cada año aparecía en la query anterior o no
+SELECT year, SUM(games_sold) AS total_games_sold
+FROM game_sales
+WHERE year IN (
+    SELECT year
+    FROM top_critic_years_more_than_four_games
+    INTERSECT
+    SELECT year
+    FROM top_user_years_more_than_four_games
+)
+GROUP BY year
+ORDER BY total_games_sold DESC;
