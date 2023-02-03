@@ -1,0 +1,84 @@
+--Selecciono el nombre del bebe y la cantidad de bebés nombrados así
+--Filtro aquellos que aparezcan en todos los años registrados (101 años) y los ordeno de mayor a menor
+SELECT first_name, SUM(num)
+FROM baby_names
+GROUP BY first_name
+HAVING COUNT(year) = 101
+ORDER BY SUM(num) DESC;
+
+
+--Clasifico los nombres según cuánto se han repetido en todos los años
+--Los ordeno alfabeticamente
+SELECT first_name, SUM(num),
+ CASE WHEN COUNT(year) > 80 THEN 'Classic'
+    WHEN COUNT(year) > 50 THEN 'Semi-classic'
+    WHEN COUNT(year) > 20 THEN 'Semi-trendy'
+    ELSE 'Trendy' END AS popularity_type
+FROM baby_names
+GROUP BY first_name
+ORDER BY first_name ASC;
+
+
+--Hago un ranking de los 10 nombres femeninos más utilizados
+SELECT first_name, SUM(num),
+    RANK() OVER(ORDER BY SUM(num) DESC) AS name_rank
+FROM baby_names
+WHERE sex = 'F'
+GROUP BY first_name
+LIMIT 10;
+
+
+--Filtro aquellos nombres que sean femeninos, se hayan usado después del 2015 y terminen con la letra A
+--Los ordeno de forma descendiente empezando por aquellos nombres con más cantidad de bebés
+SELECT first_name
+FROM baby_names
+WHERE sex = 'F' AND year > 2015 AND first_name LIKE '%a'
+GROUP BY first_name
+ORDER BY SUM(num) DESC;
+
+
+--Selecciono la cantidad de Olivias que hubo cada año y voy sumando la cantidad a través de los años
+SELECT year, first_name, num,
+    SUM(num) OVER (ORDER BY year) AS cumulative_olivias
+FROM baby_names
+WHERE first_name = 'Olivia'
+ORDER BY year ASC;
+
+
+--Muestro la cantidad de nombres masculinos que hubo en cada año
+SELECT year, MAX(num) AS max_num
+FROM baby_names
+WHERE sex = 'M'
+GROUP BY year;
+
+
+--Muestro el nombre más utilizado cada año y la cantidad de bebés que tuvieron ese nombre
+SELECT b.year, b.first_name, b.num
+FROM baby_names AS b
+INNER JOIN (
+    SELECT year, MAX(num) AS max_num
+    FROM baby_names
+    WHERE sex = 'M'
+    GROUP BY year) AS subquery
+ON subquery.year = b.year
+    AND subquery.max_num = b.num
+ORDER BY year DESC;
+
+
+--Muestro qué nombres fueron los más utilizados durante todos los años registrados
+WITH top_male_names AS (
+SELECT b.year, b.first_name, b.num
+FROM baby_names AS b
+INNER JOIN (
+    SELECT year, MAX(num) AS max_num
+    FROM baby_names
+    WHERE sex = 'M'
+    GROUP BY year) AS subquery
+ON subquery.year = b.year
+    AND subquery.max_num = b.num
+ORDER BY year DESC)
+
+SELECT first_name, COUNT(first_name) AS count_top_name
+FROM top_male_names
+GROUP BY first_name
+ORDER BY COUNT(first_name) DESC;
